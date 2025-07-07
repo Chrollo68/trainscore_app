@@ -1,9 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-<<<<<<< HEAD
-<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-=======
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
->>>>>>> 4a444d4c60c90f0f09761ff5c415f5587f3e4617
+
 <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
 <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
