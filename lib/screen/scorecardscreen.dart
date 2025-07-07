@@ -7,7 +7,6 @@ import '../providers/inspection_provider.dart';
 import '../widget/inputscore.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -23,6 +22,7 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
   final TextEditingController _trainController = TextEditingController();
   final TextEditingController _inspectorController = TextEditingController();
   DateTime? _selectedDate;
+  final _formKey = GlobalKey<FormState>();
 
   List<String> coaches = List.generate(13, (i) => "C${i + 1}");
   List<String> sections = ['T1', 'T2', 'T3', 'T4', 'D1', 'D2', 'B1', 'B2'];
@@ -33,43 +33,28 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
     "P-Dustbin",
     "P-CirculatingArea"
   ];
-  Future<void> _generatePdf() async {
-    if (await Permission.storage.request().isGranted) {
-      final document = PdfDocument();
-      final page = document.pages.add();
 
+  Future<void> _generatePdf() async {
+    try {
+      final PdfDocument document = PdfDocument();
+      final page = document.pages.add();
       page.graphics.drawString(
         'Train Cleanliness Scorecard',
         PdfStandardFont(PdfFontFamily.helvetica, 18),
       );
-
-      final StringBuffer buffer = StringBuffer()
-        ..writeln("Station: ${_stationController.text}")
-        ..writeln("Train No: ${_trainController.text}")
-        ..writeln("Inspector: ${_inspectorController.text}")
-        ..writeln(
-            "Date: ${_selectedDate != null ? "${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}" : "Not selected"}");
-
-      page.graphics.drawString(
-        buffer.toString(),
-        PdfStandardFont(PdfFontFamily.helvetica, 12),
-        bounds: const Rect.fromLTWH(0, 40, 500, 400),
-      );
-
-      final bytes = await document.save();
+      final List<int> bytes = await document.save();
       document.dispose();
-
       final dir = await getExternalStorageDirectory();
       final path = '${dir!.path}/TrainScorecard.pdf';
       final file = File(path);
       await file.writeAsBytes(bytes);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('PDF saved at: $path')),
+        SnackBar(content: Text('PDF saved at:\n$path')),
       );
-    } else {
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Storage permission denied.')),
+        SnackBar(content: Text('Failed to save PDF: $e')),
       );
     }
   }
@@ -102,6 +87,21 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
           SnackBar(content: Text("Failed: ${response.statusCode}")),
         );
       }
+
+      if (!_formKey.currentState!.validate()) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fill all required fields')),
+        );
+        return;
+      }
+
+      if (_selectedDate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select the date of inspection')),
+        );
+        return;
+      }
+      _generatePdf();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error: $e")),
@@ -185,66 +185,69 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("Basic Details",
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 16)),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _stationController,
-                            decoration: const InputDecoration(
-                              labelText: "Station Name",
-                              border: OutlineInputBorder(),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text("Basic Details",
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: _stationController,
+                              decoration: const InputDecoration(
+                                labelText: "Station Name",
+                                border: OutlineInputBorder(),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _trainController,
-                            decoration: const InputDecoration(
-                              labelText: "Train Number",
-                              border: OutlineInputBorder(),
+                            const SizedBox(height: 12),
+                            TextField(
+                              controller: _trainController,
+                              decoration: const InputDecoration(
+                                labelText: "Train Number",
+                                border: OutlineInputBorder(),
+                              ),
+                              keyboardType: TextInputType.number,
                             ),
-                            keyboardType: TextInputType.number,
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _inspectorController,
-                            decoration: const InputDecoration(
-                              labelText: "Inspector Name",
-                              border: OutlineInputBorder(),
+                            const SizedBox(height: 12),
+                            TextField(
+                              controller: _inspectorController,
+                              decoration: const InputDecoration(
+                                labelText: "Inspector Name",
+                                border: OutlineInputBorder(),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              const Icon(Icons.date_range, size: 20),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  _selectedDate == null
-                                      ? "Date of Inspection: Not selected"
-                                      : "Date of Inspection: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}",
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                const Icon(Icons.date_range, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _selectedDate == null
+                                        ? "Date of Inspection: Not selected"
+                                        : "Date of Inspection: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}",
+                                  ),
                                 ),
-                              ),
-                              TextButton(
-                                child: const Text("Pick Date"),
-                                onPressed: () async {
-                                  final picked = await showDatePicker(
-                                    context: context,
-                                    firstDate: DateTime(2020),
-                                    lastDate: DateTime(2030),
-                                    initialDate: DateTime.now(),
-                                  );
-                                  if (picked != null) {
-                                    setState(() => _selectedDate = picked);
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
+                                TextButton(
+                                  child: const Text("Pick Date"),
+                                  onPressed: () async {
+                                    final picked = await showDatePicker(
+                                      context: context,
+                                      firstDate: DateTime(2020),
+                                      lastDate: DateTime(2030),
+                                      initialDate: DateTime.now(),
+                                    );
+                                    if (picked != null) {
+                                      setState(() => _selectedDate = picked);
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

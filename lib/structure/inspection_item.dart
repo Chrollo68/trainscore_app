@@ -1,5 +1,5 @@
 class InspectionItem {
-  //This is the basic structure to store score and remarks given to each coach c1 , b1 ,u1
+  //This is the basic structure to store score and remarks given to each coach c1 -> t1
   final String id;
   int score;
   String remarks;
